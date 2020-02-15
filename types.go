@@ -7,6 +7,8 @@ type Option struct {
 	Authorizer      Authorizer
 	// an Authenticator implementation to authenticate registry users
 	Authenticator   Authenticator
+	// a pluggable tokenGenerator
+	TokenGenerator TokenGenerator
 	// .crt & .key file to sign JWT tokens
 	Certfile        string
 	Keyfile         string

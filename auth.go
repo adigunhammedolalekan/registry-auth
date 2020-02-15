@@ -3,7 +3,13 @@ package registry
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
+	"fmt"
+	"github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/libtrust"
+	"math/rand"
+	"strings"
+	"time"
 )
 // Token rep the JWT token that'll be created when authentication/authorizations succeeds
 type Token struct {
@@ -25,6 +31,11 @@ type Authenticator interface {
 type Authorizer interface {
 	Authorize(req *AuthorizationRequest) ([]string, error)
 }
+
+type TokenGenerator interface {
+	Generate(req *AuthorizationRequest, actions []string) (*Token, error)
+}
+
 // DefaultAuthenticator makes authentication successful by default
 type DefaultAuthenticator struct{}
 func (d *DefaultAuthenticator) Authenticate(username, password string) error {
@@ -35,6 +46,60 @@ func (d *DefaultAuthenticator) Authenticate(username, password string) error {
 type DefaultAuthorizer struct{}
 func (d *DefaultAuthorizer) Authorize(req *AuthorizationRequest) ([]string, error) {
 	return []string{"pull", "push"}, nil
+}
+
+type tokenGenerator struct {
+	privateKey libtrust.PrivateKey
+	pubKey libtrust.PublicKey
+	tokenOpt *TokenOption
+}
+
+func newTokenGenerator(pk libtrust.PublicKey, prk libtrust.PrivateKey, opt *TokenOption) TokenGenerator {
+	return &tokenGenerator{pubKey: pk, privateKey: prk, tokenOpt: opt}
+}
+
+func (tg *tokenGenerator) Generate(req *AuthorizationRequest, actions []string) (*Token, error) {
+	// sign any string to get the used signing Algorithm for the private key
+	_, algo, err := tg.privateKey.Sign(strings.NewReader(signAuth), 0)
+	if err != nil {
+		return nil, err
+	}
+	header := token.Header{
+		Type:       "JWT",
+		SigningAlg: algo,
+		KeyID:      tg.pubKey.KeyID(),
+	}
+	headerJson, err := json.Marshal(header)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().Unix()
+	claim := token.ClaimSet{
+		Issuer:     tg.tokenOpt.Issuer,
+		Subject:    req.Account,
+		Audience:   req.Service,
+		Expiration: now + tg.tokenOpt.Expire,
+		NotBefore:  now - 10,
+		IssuedAt:   now,
+		JWTID:      fmt.Sprintf("%d", rand.Int63()),
+		Access:     []*token.ResourceActions{},
+	}
+	claim.Access = append(claim.Access, &token.ResourceActions{
+		Type:    req.Type,
+		Name:    req.Name,
+		Actions: actions,
+	})
+	claimJson, err := json.Marshal(claim)
+	if err != nil {
+		return nil, err
+	}
+	payload := fmt.Sprintf("%s%s%s", encodeBase64(headerJson), token.TokenSeparator, encodeBase64(claimJson))
+	sig, sigAlgo, err := tg.privateKey.Sign(strings.NewReader(payload), 0)
+	if err != nil && sigAlgo != algo {
+		return nil, err
+	}
+	tk := fmt.Sprintf("%s%s%s", payload, token.TokenSeparator, encodeBase64(sig))
+	return &Token{Token: tk, AccessToken: tk}, nil
 }
 
 func loadCertAndKey(certFile, keyFile string) (libtrust.PublicKey, libtrust.PrivateKey, error) {
