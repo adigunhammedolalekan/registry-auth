@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 )
+
 // Token rep the JWT token that'll be created when authentication/authorizations succeeds
 type Token struct {
 	Token       string `json:"token"`
@@ -31,27 +32,31 @@ type Authenticator interface {
 type Authorizer interface {
 	Authorize(req *AuthorizationRequest) ([]string, error)
 }
-
+// TokenGenerator: an implementation should create a valid JWT according to the spec here
+// https://github.com/docker/distribution/blob/1b9ab303a477ded9bdd3fc97e9119fa8f9e58fca/docs/spec/auth/jwt.md
+// a default implementation that follows the spec is used when it is not provided
 type TokenGenerator interface {
 	Generate(req *AuthorizationRequest, actions []string) (*Token, error)
 }
 
 // DefaultAuthenticator makes authentication successful by default
 type DefaultAuthenticator struct{}
+
 func (d *DefaultAuthenticator) Authenticate(username, password string) error {
 	return nil
 }
 
 // DefaultAuthorizer makes authorization successful by default
 type DefaultAuthorizer struct{}
+
 func (d *DefaultAuthorizer) Authorize(req *AuthorizationRequest) ([]string, error) {
 	return []string{"pull", "push"}, nil
 }
 
 type tokenGenerator struct {
 	privateKey libtrust.PrivateKey
-	pubKey libtrust.PublicKey
-	tokenOpt *TokenOption
+	pubKey     libtrust.PublicKey
+	tokenOpt   *TokenOption
 }
 
 func newTokenGenerator(pk libtrust.PublicKey, prk libtrust.PrivateKey, opt *TokenOption) TokenGenerator {

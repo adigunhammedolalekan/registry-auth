@@ -8,8 +8,9 @@ import (
 )
 
 var mockToken = &Token{Token: "token", AccessToken: "token"}
+
 type mockTokenGenerator struct {
-	t *Token
+	t   *Token
 	err error
 }
 
@@ -55,8 +56,8 @@ func TestNewAuthServerServe(t *testing.T) {
 
 	srv := &AuthServer{
 		tokenGenerator: newMockTokenGenerator(mockToken, nil),
-		authorizer: newMockAuthorizer([]string{"pull", "push"}),
-		authenticator: newMockAuthenticator("foo", "bar"),
+		authorizer:     newMockAuthorizer([]string{"pull", "push"}),
+		authenticator:  newMockAuthenticator("foo", "bar"),
 	}
 	srv.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
@@ -72,8 +73,8 @@ func TestAuthServer_ServeHTTPAuthError(t *testing.T) {
 
 	srv := &AuthServer{
 		tokenGenerator: &mockTokenGenerator{},
-		authorizer: newMockAuthorizer([]string{"pull", "push"}),
-		authenticator: newMockAuthenticator("foo", "bar"),
+		authorizer:     newMockAuthorizer([]string{"pull", "push"}),
+		authenticator:  newMockAuthenticator("foo", "bar"),
 	}
 	srv.ServeHTTP(w, r)
 	if w.Code != http.StatusUnauthorized {
@@ -89,8 +90,8 @@ func TestAuthServer_ServeHTTPTokenError(t *testing.T) {
 
 	srv := &AuthServer{
 		tokenGenerator: newMockTokenGenerator(nil, errors.New("fake token error")),
-		authorizer: newMockAuthorizer([]string{"pull", "push"}),
-		authenticator: newMockAuthenticator("foo", "bar"),
+		authorizer:     newMockAuthorizer([]string{"pull", "push"}),
+		authenticator:  newMockAuthenticator("foo", "bar"),
 	}
 	srv.ServeHTTP(w, r)
 	if w.Code != http.StatusInternalServerError {

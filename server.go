@@ -3,16 +3,19 @@ package registry
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 )
 
 const signAuth = "AUTH"
+
 // AuthServer is the token authentication server
 type AuthServer struct {
-	authorizer    Authorizer
-	authenticator Authenticator
+	authorizer     Authorizer
+	authenticator  Authenticator
 	tokenGenerator TokenGenerator
+	crt, key string
 }
 
 // NewAuthServer creates a new AuthServer
@@ -35,7 +38,7 @@ func NewAuthServer(opt *Option) (*AuthServer, error) {
 	return &AuthServer{
 		authorizer:     opt.Authorizer,
 		authenticator:  opt.Authenticator,
-		tokenGenerator: opt.TokenGenerator,
+		tokenGenerator: opt.TokenGenerator, crt: opt.Certfile, key: opt.Keyfile,
 	}, nil
 }
 
@@ -86,6 +89,12 @@ func (srv *AuthServer) parseRequest(r *http.Request) *AuthorizationRequest {
 		req.Account = req.Name
 	}
 	return req
+}
+
+func (srv *AuthServer) Run(addr string) error {
+	http.Handle("/", srv)
+	fmt.Printf("Authentication server running at %s", addr)
+	return http.ListenAndServeTLS(addr, srv.crt, srv.key, nil)
 }
 
 func (srv *AuthServer) ok(w http.ResponseWriter, tk *Token) {
