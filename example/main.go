@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	registry "github.com/adigunhammedolalekan/docker-registry-auth"
+	registry "github.com/adigunhammedolalekan/registry-auth"
 	"log"
 	"net/http"
 	"os"
