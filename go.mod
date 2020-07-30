@@ -1,4 +1,4 @@
-module github.com/adigunhammedolalekan/docker-registry-auth
+module github.com/adigunhammedolalekan/registry-auth
 
 go 1.13
 
