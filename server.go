@@ -54,7 +54,7 @@ func (srv *AuthServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := srv.parseRequest(r)
-	actions, err := srv.authorizer.Authorize(req)
+	actions, err := srv.authorizer.Authorize(req, username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
