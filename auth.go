@@ -30,7 +30,7 @@ type Authenticator interface {
 // this function should return the list of authorized actions and a nil error. an empty list must be returned
 // if requesting user is unauthorized
 type Authorizer interface {
-	Authorize(req *AuthorizationRequest) ([]string, error)
+	Authorize(req *AuthorizationRequest, username string) ([]string, error)
 }
 // TokenGenerator: an implementation should create a valid JWT according to the spec here
 // https://github.com/docker/distribution/blob/1b9ab303a477ded9bdd3fc97e9119fa8f9e58fca/docs/spec/auth/jwt.md
@@ -49,7 +49,7 @@ func (d *DefaultAuthenticator) Authenticate(username, password string) error {
 // DefaultAuthorizer makes authorization successful by default
 type DefaultAuthorizer struct{}
 
-func (d *DefaultAuthorizer) Authorize(req *AuthorizationRequest) ([]string, error) {
+func (d *DefaultAuthorizer) Authorize(req *AuthorizationRequest, username string) ([]string, error) {
 	return []string{"pull", "push"}, nil
 }
 
